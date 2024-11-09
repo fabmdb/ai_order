@@ -1,13 +1,15 @@
-import subprocess
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Importez CORS
 import tempfile
 import os
+import subprocess
 import whisper
 
 # Charger le modèle Whisper
 model = whisper.load_model("base")
 
 app = Flask(__name__)
+CORS(app)  # Activer CORS sur toute l'application
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe_audio():
@@ -42,6 +44,7 @@ def transcribe_audio():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+
 
 
 
