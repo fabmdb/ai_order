@@ -1,3 +1,14 @@
+import os
+import subprocess
+
+# Forcer l'installation de ffmpeg via nix-env
+try:
+    subprocess.run(["ffmpeg", "-version"], check=True)
+except FileNotFoundError:
+    print("ffmpeg non trouvé, installation via nix-env...")
+    subprocess.run(["nix-env", "-iA", "nixpkgs.ffmpeg"], check=True)
+
+
 import whisper
 from flask import Flask, request, jsonify
 import tempfile
