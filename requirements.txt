@@ -3,4 +3,3 @@ flask
 ffmpeg-python
 torch
 flask-cors
-pip freeze > requirements.txt
