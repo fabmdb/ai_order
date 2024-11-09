@@ -8,16 +8,16 @@ except FileNotFoundError:
     print("ffmpeg non trouvé, installation via nix-env...")
     subprocess.run(["nix-env", "-iA", "nixpkgs.ffmpeg"], check=True)
 
-
 import whisper
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Importer CORS
 import tempfile
-import os
 
 # Charger le modèle Whisper
 model = whisper.load_model("base")  # Vous pouvez utiliser "tiny", "small", etc., selon vos ressources
 
 app = Flask(__name__)
+CORS(app)  # Activer CORS pour l'application
 
 # Définir l'endpoint pour la transcription
 @app.route("/transcribe", methods=["POST"])

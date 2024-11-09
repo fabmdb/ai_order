@@ -2,3 +2,4 @@ openai-whisper
 flask
 ffmpeg-python
 torch
+flask-cors
