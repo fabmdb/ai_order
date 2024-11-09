@@ -48,7 +48,7 @@ if __name__ == "__main__":
 # import os
 # import subprocess
 
-Forcer l'installation de ffmpeg via nix-env
+##Forcer l'installation de ffmpeg via nix-env
 # try:
     # subprocess.run(["ffmpeg", "-version"], check=True)
 # except FileNotFoundError:
@@ -60,13 +60,13 @@ Forcer l'installation de ffmpeg via nix-env
 # from flask_cors import CORS  # Importer CORS
 # import tempfile
 
-Charger le modèle Whisper
+##Charger le modèle Whisper
 # model = whisper.load_model("base")  # Vous pouvez utiliser "tiny", "small", etc., selon vos ressources
 
 # app = Flask(__name__)
 # CORS(app)  # Activer CORS pour l'application
 
-Définir l'endpoint pour la transcription
+##Définir l'endpoint pour la transcription
 # @app.route("/transcribe", methods=["POST"])
 # def transcribe_audio():
     # if "file" not in request.files:
@@ -78,7 +78,7 @@ Définir l'endpoint pour la transcription
         # temp_audio_path = temp_audio_file.name
 
     # try:
-        Transcrire l'audio en texte
+  ##      Transcrire l'audio en texte
         # result = model.transcribe(temp_audio_path, language="fr")  # Spécifiez la langue
         # transcription = result["text"]
     # except Exception as e:
