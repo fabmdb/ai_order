@@ -1,15 +1,15 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Importez CORS
+from flask_cors import CORS
+import whisper
 import tempfile
 import os
-import subprocess
-import whisper
-
-# Charger le modèle Whisper
-model = whisper.load_model("base")
+import ffmpeg
 
 app = Flask(__name__)
-CORS(app)  # Activer CORS sur toute l'application
+CORS(app)  # Active CORS pour permettre les requêtes depuis l'application web
+
+# Chargement du modèle Whisper
+model = whisper.load_model("base")
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe_audio():
@@ -17,33 +17,24 @@ def transcribe_audio():
         return jsonify({"error": "Aucun fichier audio fourni"}), 400
 
     file = request.files["file"]
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
         file.save(temp_audio_file.name)
         temp_audio_path = temp_audio_file.name
 
-    # Convertir le fichier en wav
-    wav_path = temp_audio_path.replace(".webm", ".wav")
     try:
-        subprocess.run(["ffmpeg", "-i", temp_audio_path, wav_path], check=True)
-    except subprocess.CalledProcessError:
-        os.remove(temp_audio_path)
-        return jsonify({"error": "Erreur de conversion du fichier audio"}), 500
-    finally:
-        os.remove(temp_audio_path)
-
-    # Transcrire l'audio converti en texte
-    try:
-        result = model.transcribe(wav_path, language="fr")
+        # Transcription audio en texte
+        result = model.transcribe(temp_audio_path, language="fr")
         transcription = result["text"]
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("Erreur lors de la transcription :", str(e))  # Log l'erreur sur le serveur
+        return jsonify({"error": "Erreur lors de la transcription : " + str(e)}), 500
     finally:
-        os.remove(wav_path)
+        os.remove(temp_audio_path)
 
     return jsonify({"transcription": transcription})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), debug=True)
 
 
 
