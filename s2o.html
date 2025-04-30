@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  <title>s2o - Speak to Order (Mobile) - Deepgram</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 10px;
+      background-color: #f5f5f5;
+      font-size: 16px;
+    }
+    
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      background-color: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      font-size: 1.5rem;
+    }
+    
+    .panels {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    h2 {
+      color: #3498db;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    
+    .transcript-box, .order-box {
+      border: 1px solid #ddd;
+      min-height: 150px;
+      padding: 12px;
+      border-radius: 5px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+    }
+    
+    .transcript-box {
+      background-color: #f9f9f9;
+      color: #666;
+    }
+    
+    .order-box {
+      background-color: #f0f8ff;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 12px 18px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+      font-size: 0.95rem;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    
+    button:hover {
+      background-color: #2980b9;
+    }
+    
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    
+    #resetBtn {
+      background-color: #e74c3c;
+    }
+    
+    #resetBtn:hover {
+      background-color: #c0392b;
+    }
+    
+    #backBtn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      padding: 10px 15px;
+      font-size: 0.95rem;
+      background-color: #3498db;
+      border-radius: 30px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      text-decoration: none;
+    }
+    
+    #backBtn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    #backBtn i {
+      font-size: 0.9rem;
+      color: white;
+    }
+    
+    .item {
+      margin-bottom: 12px;
+      font-weight: bold;
+      color: #2c3e50;
+      font-size: 0.9rem;
+    }
+    
+    .option {
+      margin-left: 20px;
+      color: #7f8c8d;
+      margin-bottom: 5px;
+      font-style: italic;
+      font-size: 0.85rem;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+      background-color: #e74c3c;
+    }
+    
+    .status-indicator.active {
+      background-color: #2ecc71;
+    }
+    
+    .status-text {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+    }
+
+    .microphone-permission {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 5px;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .microphone-permission.visible {
+      display: block;
+    }
+    
+    .permission-instructions {
+      margin-top: 12px;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      border-left: 4px solid #dc3545;
+    }
+    
+    .permission-instructions ol {
+      margin-left: 20px;
+      padding-left: 0;
+    }
+    
+    .permission-instructions li {
+      margin-bottom: 5px;
+    }
+    
+    .permission-btn {
+      background-color: #28a745;
+      margin-top: 10px;
+      width: 100%;
+    }
+    
+    .permission-btn:hover {
+      background-color: #218838;
+    }
+    
+    .security-error {
+      background-color: #ffe8e6;
+      border: 1px solid #ffb3b3;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      color: #c00;
+    }
+    
+    .security-error p {
+      margin: 5px 0;
+    }
+    
+    .security-error ul {
+      margin-top: 5px;
+      padding-left: 25px;
+    }
+    
+    .security-error li {
+      margin-bottom: 3px;
+    }
+    
+    .console-log {
+      background-color: #333;
+      color: #63c634;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin: 10px 0;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    
+    .console-error {
+      color: #ff5555;
+    }
+
+    #audioVisualizer {
+      width: 100%;
+      height: 40px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .visualizer-bar {
+      position: absolute;
+      bottom: 0;
+      background-color: #3498db;
+      width: 3px;
+      border-radius: 2px 2px 0 0;
+    }
+    
+    .category-header {
+      background-color: #ecf0f1;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #34495e;
+      border-left: 4px solid #3498db;
+      font-size: 0.9rem;
+    }
+    
+    .quantity {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      width: 22px;
+      height: 22px;
+      text-align: center;
+      line-height: 22px;
+      border-radius: 50%;
+      margin-right: 8px;
+      font-size: 0.85rem;
+    }
+    
+    .deepgram-info {
+      background-color: #e8f4fd;
+      border: 1px solid #bee3f8;
+      color: #2b6cb0;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 5px;
+      font-size: 0.85rem;
+    }
+    
+    .browser-specific {
+      display: none;
+    }
+    
+    .browser-specific.show-chrome {
+      display: block;
+    }
+    
+    .browser-specific.show-firefox {
+      display: block;
+    }
+    
+    .browser-specific.show-safari {
+      display: block;
+    }
+    
+    .browser-icon {
+      width: 20px;
+      height: 20px;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    
+    .debug-info {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+    
+    /* Media Queries pour les téléphones */
+    @media screen and (min-width: 768px) {
+      .panels {
+        flex-direction: row;
+      }
+      
+      .panel {
+        flex: 1;
+      }
+      
+      .container {
+        max-width: 900px;
+        padding: 20px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .transcript-box, .order-box {
+        min-height: 250px;
+      }
+    }
+    
+    /* Désactiver le zoom sur double-tap sur les appareils iOS */
+    * { 
+      touch-action: manipulation; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>s2o - Speak to Order (Version Mobile)</h1>
+    
+    <a href="https://speak2order.pro/prog.html" id="backBtn" class="back-btn">
+      <i class="fas fa-arrow-left"></i> Retour
+    </a>
+    
+    <div class="status">
+      <div id="status-indicator" class="status-indicator"></div>
+      <div id="status-text" class="status-text">En attente de démarrage...</div>
+    </div>
+    
+    <div id="microphone-permission" class="microphone-permission">
+      <h3>⚠️ Accès au microphone requis</h3>
+      <p>Votre navigateur a bloqué l'accès au microphone. Ce système nécessite un accès au microphone pour fonctionner.</p>
+      <div class="permission-instructions">
+        <div id="security-error-container"></div>
+        
+        <p><strong>Comment autoriser l'accès :</strong></p>
+        
+        <div class="browser-specific chrome">
+          <p><i class="fab fa-chrome"></i> <strong>Chrome :</strong></p>
+          <ol>
+            <li>Une popup devrait apparaître pour demander l'accès</li>
+            <li>Si aucune popup n'apparaît, cliquez sur l'icône de site ou l'icône d'information dans la barre d'adresse</li>
+            <li>Trouvez les paramètres de "Microphone" ou "Son"</li>
+            <li>Changez le paramètre à "Autoriser"</li>
+            <li>Rafraîchissez la page</li>
+          </ol>
+        </div>
+        
+        <div class="browser-specific firefox">
+          <p><i class="fab fa-firefox"></i> <strong>Firefox :</strong></p>
+          <ol>
+            <li>Une popup devrait apparaître pour demander l'accès</li>
+            <li>Si aucune popup n'apparaît, cliquez sur l'icône d'information (i) dans la barre d'adresse</li>
+            <li>Cliquez sur la flèche à côté de "Permissions"</li>
+            <li>Trouvez "Utiliser le microphone" et sélectionnez "Autoriser"</li>
+            <li>Rafraîchissez la page</li>
+          </ol>
+        </div>
+        
+        <div class="browser-specific safari">
+          <p><i class="fab fa-safari"></i> <strong>Safari :</strong></p>
+          <ol>
+            <li>Une popup devrait apparaître pour demander l'accès</li>
+            <li>Si aucune popup n'apparaît, cliquez sur l'icône de paramètres du site dans la barre d'adresse</li>
+            <li>Trouvez les paramètres liés au microphone</li>
+            <li>Alternativement, ouvrez les Préférences (⌘ + ,)</li>
+            <li>Allez dans l'onglet "Sites web" puis "Microphone"</li>
+            <li>Trouvez ce site et sélectionnez "Autoriser"</li>
+            <li>Rafraîchissez la page</li>
+          </ol>
+        </div>
+        
+        <button id="requestPermissionBtn" class="permission-btn">Autoriser l'accès au microphone</button>
+      </div>
+    </div>
+    
+    <div class="deepgram-info">
+      <h3><i class="fas fa-microphone"></i> Powered by Deepgram</h3>
+      <p>Cette application utilise l'API Deepgram pour une transcription vocale plus précise.</p>
+    </div>
+    
+    <div class="controls">
+      <button id="startBtn">Démarrer l'écoute</button>
+      <button id="stopBtn" disabled>Arrêter l'écoute</button>
+      <button id="resetBtn">Réinitialiser</button>
+    </div>
+
+    <div id="audioVisualizer"></div>
+    
+    <div class="panels">
+      <div class="panel">
+        <h2>Transcription</h2>
+        <div id="transcript" class="transcript-box"></div>
+      </div>
+      
+      <div class="panel">
+        <h2>Commande extraite</h2>
+        <div id="order" class="order-box"><p>En attente de commande...</p></div>
+      </div>
+    </div>
+    
+    <div id="debug-panel" class="debug-info" style="display: none;">
+      <h3>Informations de débogage</h3>
+      <div id="debug-info"></div>
+      <div id="console-output"></div>
+    </div>
+  </div>
+
+<script>
+// Configuration du menu restaurant
+const menuItems = {
+  categories: {
+    boissons: {
+      nom: "Boissons",
+      plats: ["cola", "eau", "vin", "bière", "soda", "jus", "café", "thé", "limonade"]
+    },
+    entrees: {
+      nom: "Entrées",
+      plats: ["salade", "soupe", "carpaccio", "foie gras", "assiette", "bruschetta", "crevettes", "antipasti", "charcuterie"]
+    },
+    plats: {
+      nom: "Plats",
+      plats: ["steak", "entrecôte", "hamburger", "pizza", "pâtes", "poisson", "poulet", "lasagne", "risotto", "omelette", "tagliatelle", "carbonara", "bolognaise", "faux-filet", "filet", "côte de bœuf", "magret", "tartare"]
+    },
+    desserts: {
+      nom: "Desserts",
+      plats: ["glace", "tiramisu", "mousse", "tarte", "gâteau", "crème", "crêpe", "profiterole", "sorbet", "cheesecake", "fondant"]
+    }
+  },
+  options: {
+    cuisson: ["bleu", "saignant", "à point", "bien cuit", "mi-cuit"],
+    accompagnement: ["frites", "riz", "légumes", "salade verte", "purée", "pâtes", "pommes de terre", "gratin", "haricots", "ratatouille"],
+    sauce: ["roquefort", "poivre", "échalote", "béarnaise", "beurre blanc", "tomate", "carbonara", "champignon", "bolognaise", "barbecue", "ketchup", "mayonnaise", "moutarde"],
+    format: ["petit", "moyen", "grand", "XL"],
+    parfum: ["chocolat", "vanille", "fraise", "café", "pistache", "caramel", "citron", "framboise", "mangue", "noix de coco"],
+    topping: ["fromage", "champignons", "oignons", "bacon", "œuf", "tomate", "jambon", "anchois", "olives", "poivrons", "chantilly", "coulis", "sauce chocolat", "amandes"]
+  },
+  liaisons: {
+    avec: ["avec", "et", "accompagné de", "servi avec"],
+    sans: ["sans", "pas de", "surtout pas de"]
+  }
+};
+
+// Application principale
+document.addEventListener('DOMContentLoaded', function() {
+  // Configuration Deepgram - La clé API est maintenant gérée par le proxy
+  // Pas besoin de définir DEEPGRAM_API_KEY ici
+  
+  // Éléments DOM
+  const transcriptBox = document.getElementById('transcript');
+  const orderBox = document.getElementById('order');
+  const startButton = document.getElementById('startBtn');
+  const stopButton = document.getElementById('stopBtn');
+  const resetButton = document.getElementById('resetBtn');
+  const statusIndicator = document.getElementById('status-indicator');
+  const statusText = document.getElementById('status-text');
+  const permissionWarning = document.getElementById('microphone-permission');
+  const audioVisualizer = document.getElementById('audioVisualizer');
+  const debugPanel = document.getElementById('debug-panel');
+  const debugInfo = document.getElementById('debug-info');
+  const consoleOutput = document.getElementById('console-output');
+  const manualInput = null;
+  const processManualBtn = null;
+  
+  // Variables d'état
+  let isListening = false;
+  let transcript = "";
+  let currentOrder = [];
+  let audioStream = null;
+  let audioContext = null;
+  let visualizerBars = [];
+  let deepgramSocket = null;
+  const visualizerBarCount = 20; // Réduit pour les mobiles
+  let mediaRecorder = null;
+  let useWebSpeechAPI = false; // Par défaut, on essaie d'utiliser Deepgram
+  
+  // Activer le mode débogage en ajoutant ?debug=1 à l'URL
+  const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
+  if (debugMode) {
+    debugPanel.style.display = 'block';
+    // Rediriger les logs de console vers notre panneau de débogage
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    
+    console.log = function() {
+      originalConsoleLog.apply(console, arguments);
+      const args = Array.from(arguments);
+      const logMessage = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+      ).join(' ');
+      
+      consoleOutput.innerHTML += `<div>${logMessage}</div>`;
+    };
+    
+    console.error = function() {
+      originalConsoleError.apply(console, arguments);
+      const args = Array.from(arguments);
+      const logMessage = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+      ).join(' ');
+      
+      consoleOutput.innerHTML += `<div class="console-error">${logMessage}</div>`;
+    };
+  }
+  
+  // Initialisation
+  initVisualizer();
+  
+  // Détecter si c'est un appareil iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
+  // Configuration du visualiseur audio
+  function initVisualizer() {
+    audioVisualizer.innerHTML = '';
+    visualizerBars = [];
+    for (let i = 0; i < visualizerBarCount; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'visualizer-bar';
+      bar.style.left = `${(i / visualizerBarCount) * 100}%`;
+      bar.style.height = '0px';
+      audioVisualizer.appendChild(bar);
+      visualizerBars.push(bar);
+    }
+  }
+  
+  // Mise à jour du visualiseur audio
+  function updateVisualizer(dataArray) {
+    const bufferLength = dataArray.length;
+    
+    for (let i = 0; i < visualizerBarCount; i++) {
+      const index = Math.floor((i / visualizerBarCount) * bufferLength);
+      const value = dataArray[index] / 255;
+      const height = value * audioVisualizer.clientHeight;
+      visualizerBars[i].style.height = `${height}px`;
+    }
+  }
+  
+  // Gestion des événements du bouton
+  startButton.addEventListener('click', function() {
+    startListening();
+  });
+  
+  stopButton.addEventListener('click', function() {
+    stopListening();
+  });
+  
+  resetButton.addEventListener('click', function() {
+    resetOrder();
+  });
+  
+  // Bouton pour demander la permission d'accès au microphone
+  const requestPermissionBtn = document.getElementById('requestPermissionBtn');
+  if (requestPermissionBtn) {
+    requestPermissionBtn.addEventListener('click', function() {
+      requestMicrophonePermission();
+    });
+  }
+  
+
+  
+  // Configuration du contexte audio
+  function setupAudioContext(stream) {
+    if (audioContext) {
+      try {
+        audioContext.close();
+      } catch(e) {
+        console.warn('Error closing audio context:', e);
+      }
+    }
+    
+    audioStream = stream;
+    
+    try {
+      // Configuration de l'analyseur audio pour le visualiseur
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      source.connect(analyser);
+      
+      // Sur iOS, créer un nœud de gain silencieux pour débloquer l'audio
+      if (isIOS) {
+        const silentGain = audioContext.createGain();
+        silentGain.gain.value = 0;
+        analyser.connect(silentGain);
+        silentGain.connect(audioContext.destination);
+      }
+      
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      const updateVisualization = () => {
+        if (isListening) {
+          analyser.getByteFrequencyData(dataArray);
+          updateVisualizer(dataArray);
+          requestAnimationFrame(updateVisualization);
+        }
+      };
+      
+      updateVisualization();
+    } catch (error) {
+      console.error('Erreur lors de la configuration du contexte audio:', error);
+    }
+  }
+  
+  // Mettre à jour l'indicateur de statut
+  function updateStatus(active, message) {
+    if (active) {
+      statusIndicator.classList.add('active');
+    } else {
+      statusIndicator.classList.remove('active');
+    }
+    statusText.textContent = message;
+  }
+  
+  // Fonction pour détecter le navigateur
+  function detectBrowser() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.indexOf('chrome') > -1) return 'chrome';
+    if (userAgent.indexOf('firefox') > -1) return 'firefox';
+    if (userAgent.indexOf('safari') > -1 && userAgent.indexOf('chrome') === -1) return 'safari';
+    return 'unknown';
+  }
+  
+  // Vérifier si le site est en HTTPS
+  function isSecureContext() {
+    return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  }
+  
+  // Fonction pour demander la permission d'accès au microphone
+  function requestMicrophonePermission() {
+    // Vérifier d'abord si nous sommes dans un contexte sécurisé
+    if (!isSecureContext()) {
+      console.error('Erreur de sécurité: L\'accès au microphone nécessite HTTPS');
+      updateStatus(false, "Erreur de sécurité: L'accès au microphone nécessite HTTPS");
+      
+      // Ajouter un message spécifique pour ce problème
+      const securityErrorContainer = document.getElementById('security-error-container');
+      if (securityErrorContainer) {
+        securityErrorContainer.innerHTML = `
+          <div class="security-error">
+            <p><strong>⚠️ Erreur de sécurité détectée</strong></p>
+            <p>L'accès au microphone nécessite une connexion sécurisée (HTTPS). Vous utilisez actuellement HTTP.</p>
+            <p>Solutions possibles:</p>
+            <ul>
+              <li>Hébergez cette page sur un serveur HTTPS</li>
+              <li>Utilisez un service comme GitHub Pages qui fournit HTTPS</li>
+              <li>En développement local, utilisez localhost (qui est considéré comme sécurisé)</li>
+            </ul>
+          </div>
+        `;
+      }
+      
+      permissionWarning.classList.add('visible');
+      return;
+    }
+    
+    updateStatus(false, "Demande d'accès au microphone...");
+    
+    // Vérifier si l'API MediaDevices est disponible
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('API MediaDevices non supportée par ce navigateur');
+      updateStatus(false, "Votre navigateur ne supporte pas l'accès au microphone");
+      permissionWarning.classList.add('visible');
+      return;
+    }
+    
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        // Arrêter immédiatement le flux, nous voulons juste la permission
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Permission accordée
+        updateStatus(false, "Accès au microphone autorisé. Vous pouvez démarrer l'écoute.");
+        permissionWarning.classList.remove('visible');
+      })
+      .catch(error => {
+        console.error('Erreur lors de la demande d\'accès au microphone:', error);
+        
+        // Afficher l'erreur spécifique dans la console pour le débogage
+        console.log('Type d\'erreur:', error.name);
+        console.log('Message d\'erreur:', error.message);
+        
+        // Mettre à jour le message avec des instructions spécifiques au navigateur
+        const browser = detectBrowser();
+        updateBrowserSpecificInstructions(browser);
+        
+        updateStatus(false, `Accès au microphone refusé (${error.name})`);
+        permissionWarning.classList.add('visible');
+      });
+  }
+  
+  // Mettre à jour les instructions spécifiques au navigateur
+  function updateBrowserSpecificInstructions(browser) {
+    const allBrowserInstructions = document.querySelectorAll('.browser-specific');
+    allBrowserInstructions.forEach(el => {
+      el.classList.remove('show-chrome', 'show-firefox', 'show-safari');
+    });
+    
+    if (browser === 'chrome' || browser === 'unknown') {
+      const chromeInstructions = document.querySelectorAll('.browser-specific.chrome');
+      chromeInstructions.forEach(el => el.classList.add('show-chrome'));
+    } else if (browser === 'firefox') {
+      const firefoxInstructions = document.querySelectorAll('.browser-specific.firefox');
+      firefoxInstructions.forEach(el => el.classList.add('show-firefox'));
+    } else if (browser === 'safari') {
+      const safariInstructions = document.querySelectorAll('.browser-specific.safari');
+      safariInstructions.forEach(el => el.classList.add('show-safari'));
+    }
+  }
+  
+  // Fonction pour établir une connexion WebSocket avec le proxy Render.com
+  function connectToDeepgram() {
+  // Mettre à jour le statut
+  updateStatus(false, "Connexion à Deepgram en cours...");
+  
+  // Variables pour la logique de réessai
+  let retryCount = 0;
+  const maxRetries = 3;
+  const retryDelay = 2000; // 2 secondes entre chaque tentative
+  
+  // Fonction de tentative de connexion avec réessai
+  function attemptConnection() {
+    try {
+      // Test d'environnement sécurisé
+      if (!isSecureContext()) {
+        const errorMessage = "Erreur: Cette fonctionnalité nécessite un contexte sécurisé (HTTPS).";
+        console.error(errorMessage);
+        updateStatus(false, errorMessage);
+        
+        fallbackToWebSpeech();
+        return;
+      }
+      
+      // URL du nouveau proxy WebSocket - METTEZ À JOUR cette URL avec la nouvelle adresse de votre service
+      const proxyURL = "wss://votre-nouveau-service.onrender.com/websocket";
+      
+      // Initialiser la connexion WebSocket
+      console.log(`Tentative de connexion WebSocket au proxy (${retryCount+1}/${maxRetries})...`, proxyURL);
+      deepgramSocket = new WebSocket(proxyURL);
+      
+      // Configurer un timeout pour la connexion
+      const connectionTimeout = setTimeout(() => {
+        if (deepgramSocket.readyState !== WebSocket.OPEN) {
+          console.error('Timeout de connexion au proxy');
+          
+          // Nettoyer la connexion
+          if (deepgramSocket) {
+            try {
+              deepgramSocket.close();
+            } catch (e) {
+              console.warn('Erreur lors de la fermeture du socket:', e);
+            }
+          }
+          
+          // Réessayer si possible
+          if (retryCount < maxRetries) {
+            retryCount++;
+            updateStatus(false, `Nouvelle tentative dans ${retryDelay/1000}s (${retryCount}/${maxRetries})...`);
+            setTimeout(attemptConnection, retryDelay);
+          } else {
+            updateStatus(false, 'Échec de connexion au proxy après plusieurs tentatives');
+            fallbackToWebSpeech();
+          }
+        }
+      }, 10000); // 10 secondes de timeout
+      
+      // Configurer les événements WebSocket
+      deepgramSocket.onopen = () => {
+        console.log('Connexion WebSocket au proxy établie');
+        clearTimeout(connectionTimeout);
+        
+        try {
+          // Le socket est prêt, démarrer l'enregistrement
+          startRecording();
+          updateStatus(true, "Connexion à Deepgram établie");
+        } catch (error) {
+          console.error("Erreur lors de l'initialisation de l'enregistrement:", error);
+          updateStatus(false, "Erreur d'initialisation de l'enregistrement");
+          fallbackToWebSpeech();
+        }
+      };
+      
+      // Le reste du code reste inchangé...
+      // ...
+    } catch (e) {
+      console.error('Exception lors de la connexion au proxy:', e);
+      
+      // Si nous n'avons pas atteint le nombre maximum de tentatives, réessayer
+      if (retryCount < maxRetries) {
+        retryCount++;
+        updateStatus(false, `Erreur de connexion, nouvelle tentative dans ${retryDelay/1000}s (${retryCount}/${maxRetries})...`);
+        setTimeout(attemptConnection, retryDelay);
+      } else {
+        updateStatus(false, 'Erreur: Impossible de se connecter au proxy après plusieurs tentatives');
+        fallbackToWebSpeech();
+      }
+    }
+  }
+  
+  // Lancer la première tentative
+  attemptConnection();
+}
+  
+  // Configuration pour la solution de contournement CORS
+ function startRecording() {
+  if (!audioStream) {
+    console.error('Flux audio non disponible');
+    return;
+  }
+  
+  try {
+    // Configuration du MediaRecorder
+    const options = { mimeType: 'audio/webm' };
+    
+    try {
+      mediaRecorder = new MediaRecorder(audioStream, options);
+    } catch (e) {
+      console.warn('audio/webm non supporté, essai avec audio/ogg');
+      try {
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/ogg' });
+      } catch (e2) {
+        console.warn('audio/ogg non supporté, essai du format par défaut');
+        mediaRecorder = new MediaRecorder(audioStream);
+      }
+    }
+    
+    console.log('Format audio utilisé:', mediaRecorder.mimeType);
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0 && deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+        try {
+          deepgramSocket.send(event.data);
+        } catch (error) {
+          console.error('Erreur lors de l\'envoi des données audio:', error);
+        }
+      }
+    };
+    
+    mediaRecorder.onerror = (error) => {
+      console.error('Erreur MediaRecorder:', error);
+      updateStatus(false, 'Erreur d\'enregistrement');
+    };
+    
+    // Configurer l'intervalle d'envoi des données (plus court pour une réactivité accrue)
+    mediaRecorder.start(250); // 250ms entre chaque envoi de données
+    
+    updateStatus(true, "Écoute en cours avec Deepgram...");
+    startButton.disabled = true;
+    stopButton.disabled = false;
+    isListening = true;
+  } catch (error) {
+    console.error('Erreur lors du démarrage de l\'enregistrement:', error);
+    updateStatus(false, 'Erreur d\'enregistrement: format non supporté');
+    
+    fallbackToWebSpeech();
+  }
+}
+  
+  // Fallback à l'API Web Speech native - Elle fonctionne même avec les restrictions CORS
+  function fallbackToWebSpeech() {
+    console.log('Utilisation de l\'API Web Speech en fallback...');
+    useWebSpeechAPI = true;
+    
+    // Terminer proprement toute connexion Deepgram
+    if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+      try {
+        deepgramSocket.close();
+      } catch (e) {
+        console.warn('Erreur lors de la fermeture du socket Deepgram:', e);
+      }
+    }
+    
+    // Stopper le MediaRecorder s'il est en cours d'utilisation
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      try {
+        mediaRecorder.stop();
+      } catch (e) {
+        console.warn('Erreur lors de l\'arrêt du MediaRecorder:', e);
+      }
+    }
+    
+    if (isListening) {
+      // Informer l'utilisateur du basculement vers l'API de reconnaissance vocale native
+      updateStatus(true, "Basculement vers la reconnaissance vocale native...");
+      setTimeout(() => {
+        startWebSpeechAPI();
+      }, 500);
+    }
+  }
+  
+  // Démarrer la reconnaissance vocale native
+  function startWebSpeechAPI() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      console.error("L'API Web Speech n'est pas supportée par ce navigateur");
+      updateStatus(false, "Reconnaissance vocale non supportée par ce navigateur");
+      return;
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.lang = 'fr-FR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    recognition.onstart = () => {
+      updateStatus(true, "Écoute en cours (API Web Speech)...");
+    };
+    
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptResult = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcriptResult;
+        } else {
+          interimTranscript += transcriptResult;
+        }
+      }
+      
+      // Mettre à jour la transcription
+      if (finalTranscript) {
+        transcript += ' ' + finalTranscript;
+        transcriptBox.textContent = transcript;
+        extractOrderItems(transcript);
+      } else {
+        transcriptBox.textContent = transcript + ' ' + interimTranscript;
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('Erreur Web Speech API:', event.error);
+      updateStatus(false, `Erreur: ${event.error}`);
+    };
+    
+    recognition.onend = () => {
+      if (isListening) {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.warn('Impossible de redémarrer la reconnaissance vocale:', e);
+          isListening = false;
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          updateStatus(false, "Reconnaissance vocale arrêtée");
+        }
+      }
+    };
+    
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error('Erreur lors du démarrage de la reconnaissance vocale:', e);
+      updateStatus(false, "Erreur de reconnaissance vocale");
+    }
+  }
+  
+  // Démarrer l'écoute
+  function startListening() {
+    // D'abord obtenir l'accès au microphone
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        // Configurer le contexte audio pour le visualiseur
+        setupAudioContext(stream);
+        
+        if (useWebSpeechAPI) {
+          // Utiliser l'API Web Speech
+          startWebSpeechAPI();
+        } else {
+          // Essayer d'utiliser Deepgram
+          connectToDeepgram();
+        }
+        
+        // Masquer l'avertissement de permission
+        permissionWarning.classList.remove('visible');
+      })
+      .catch(error => {
+        console.error('Erreur lors de la demande d\'accès au microphone:', error);
+        updateStatus(false, "Accès au microphone refusé");
+        
+        // Mettre à jour les instructions spécifiques au navigateur
+        const browser = detectBrowser();
+        updateBrowserSpecificInstructions(browser);
+        
+        permissionWarning.classList.add('visible');
+      });
+  }
+  
+  // Arrêter l'écoute
+  function stopListening() {
+    isListening = false;
+    
+    // Arrêter le MediaRecorder
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    
+    // Fermer la connexion WebSocket Deepgram
+    if (deepgramSocket) {
+      if (deepgramSocket.readyState === WebSocket.OPEN) {
+        deepgramSocket.close();
+      }
+      deepgramSocket = null;
+    }
+    
+    // Arrêter les pistes audio
+    if (audioStream) {
+      audioStream.getTracks().forEach(track => track.stop());
+      audioStream = null;
+    }
+    
+    // Mettre à jour l'interface
+    startButton.disabled = false;
+    stopButton.disabled = true;
+    updateStatus(false, "Reconnaissance vocale arrêtée");
+    
+    // Réinitialiser le visualiseur
+    visualizerBars.forEach(bar => {
+      bar.style.height = '0px';
+    });
+  }
+  
+  // Réinitialiser la commande
+  function resetOrder() {
+    currentOrder = [];
+    transcript = "";
+    transcriptBox.textContent = "";
+    orderBox.innerHTML = "<p>En attente de commande...</p>";
+  }
+  
+  // Extraire les articles et options de la commande
+  function extractOrderItems(text) {
+    // Convertir en minuscules pour faciliter la correspondance
+    const lowerText = text.toLowerCase();
+    currentOrder = [];
+    
+    // Parcourir toutes les catégories et leurs plats
+    for (const [categoryKey, category] of Object.entries(menuItems.categories)) {
+      for (const item of category.plats) {
+        // Recherche plus précise des articles mentionnés dans le texte
+        const regex = new RegExp(`\\b(\\d+)?\\s*(un|une|des|le|la|les|du|de la|l'|)\\s*${item}s?\\b`, 'gi');
+        const matches = [...lowerText.matchAll(regex)];
+        
+        for (const match of matches) {
+          // Vérifier si cet article est déjà dans la commande
+          let quantity = 1;
+          
+          // Si une quantité a été détectée, la prendre en compte
+          if (match[1]) {
+            quantity = parseInt(match[1]);
+          }
+          
+          // Ajouter le nouvel article
+          currentOrder.push({
+            name: item,
+            quantity: quantity,
+            category: categoryKey,
+            categoryName: category.nom,
+            options: extractOptionsForItem(lowerText, match.index, match[0].length)
+          });
+        }
+      }
+    }
+    
+    // Trier les articles par catégorie
+    currentOrder.sort((a, b) => {
+      const categoryOrder = ['boissons', 'entrees', 'plats', 'desserts'];
+      return categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+    });
+    
+    // Mettre à jour l'affichage de la commande
+    updateOrderDisplay();
+  }
+  
+  // Extraire les options pour un article donné
+  function extractOptionsForItem(text, itemPosition, itemLength) {
+    const options = {};
+    const contextWindow = 100; // Nombre de caractères à considérer après la mention de l'article
+    
+    // Extraire un segment de texte après la mention de l'article
+    const endPos = Math.min(itemPosition + itemLength + contextWindow, text.length);
+    const contextText = text.substring(itemPosition, endPos);
+    
+    // Parcourir chaque type d'option
+    for (const [optionType, optionValues] of Object.entries(menuItems.options)) {
+      options[optionType] = [];
+      
+      // Chercher une correspondance pour chaque valeur d'option
+      for (const optionValue of optionValues) {
+        // Pour chaque mot de liaison "avec"
+        for (const avecWord of menuItems.liaisons.avec) {
+          const avecRegex = new RegExp(`${avecWord}\\s+(?:[\\w\\s]*?\\s+)?(${optionValue})\\b`, 'i');
+          const avecMatch = contextText.match(avecRegex);
+          
+          if (avecMatch) {
+            // Ne pas ajouter de doublons
+            if (!options[optionType].includes(optionValue)) {
+              options[optionType].push(optionValue);
+            }
+          }
+        }
+        
+        // Recherche simple d'options sans mot de liaison
+        const simpleRegex = new RegExp(`\\b${optionValue}\\b`, 'i');
+        if (contextText.match(simpleRegex)) {
+          // Vérifier que ce n'est pas dans un contexte "sans [option]"
+          let isSansContext = false;
+          
+          for (const sansWord of menuItems.liaisons.sans) {
+            const sansRegex = new RegExp(`${sansWord}\\s+(?:[\\w\\s]*?\\s+)?(${optionValue})\\b`, 'i');
+            if (contextText.match(sansRegex)) {
+              isSansContext = true;
+              break;
+            }
+          }
+          
+          if (!isSansContext && !options[optionType].includes(optionValue)) {
+            options[optionType].push(optionValue);
+          }
+        }
+      }
+      
+      // Si aucune option n'a été trouvée pour ce type, supprimer la clé
+      if (options[optionType].length === 0) {
+        delete options[optionType];
+      }
+    }
+    
+    return options;
+  }
+  
+  // Mettre à jour l'affichage de la commande
+  function updateOrderDisplay() {
+    if (currentOrder.length === 0) {
+      orderBox.innerHTML = "<p>En attente de commande...</p>";
+      return;
+    }
+    
+    let html = "";
+    let currentCategory = null;
+    
+    for (const item of currentOrder) {
+      // Ajouter un en-tête de catégorie si nécessaire
+      if (currentCategory !== item.category) {
+        currentCategory = item.category;
+        
+        // Compter le nombre d'articles dans cette catégorie
+        const categoryCount = currentOrder.filter(orderItem => orderItem.category === item.category)
+                               .reduce((total, orderItem) => total + orderItem.quantity, 0);
+        
+        html += `<div class="category-header">${item.categoryName} (${categoryCount})</div>`;
+      }
+      
+      // Afficher l'article avec sa quantité
+      html += `<div class="item"><span class="quantity">${item.quantity}</span>${capitalize(item.name)}</div>`;
+      
+      // Afficher les options pour cet article
+      for (const [optionType, optionValues] of Object.entries(item.options)) {
+        // Formater les options avec un "+" entre chaque valeur
+        const formattedValues = optionValues.map(val => capitalize(val)).join(' + ');
+        html += `<div class="option">• ${capitalize(optionType)} : ${formattedValues}</div>`;
+      }
+    }
+    orderBox.innerHTML = html;
+  }
+  
+  // Mettre en majuscule la première lettre
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+  
+  // Compatibilité iOS spécifique
+  function handleIOSSpecificIssues() {
+    if (isIOS) {
+      // iOS nécessite que l'utilisateur interagisse avec la page avant d'utiliser l'audioContext
+      document.body.addEventListener('touchstart', function iosAudioContextFix() {
+        // Créer et fermer immédiatement un contexte audio pour débloquer la fonctionnalité audio
+        const tempContext = new (window.AudioContext || window.webkitAudioContext)();
+        tempContext.resume().then(() => {
+          tempContext.close();
+          // Supprimer cet événement une fois qu'il a été appelé
+          document.body.removeEventListener('touchstart', iosAudioContextFix);
+        });
+      }, { once: true });
+    }
+  }
+  
+  // Appeler la fonction de compatibilité iOS
+  handleIOSSpecificIssues();
+});
+</script>
+
+</body>
+</html>
