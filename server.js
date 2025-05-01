@@ -1,221 +1,115 @@
-// server.js - Version minimaliste sans dépendances lourdes
-const http = require('http');
+// Serveur proxy ultra-minimal pour Deepgram
+// Optimisé pour fonctionner avec un minimum de mémoire (<128MB)
 const WebSocket = require('ws');
+const http = require('http');
 
-// Configuration
+// Configuration minimale
 const PORT = process.env.PORT || 8080;
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
 
+// Vérification API key
 if (!DEEPGRAM_API_KEY) {
-  console.error('❌ DEEPGRAM_API_KEY environment variable is required');
+  console.error('DEEPGRAM_API_KEY missing');
   process.exit(1);
 }
 
-// Serveur HTTP simple
+// Serveur HTTP minimal
 const server = http.createServer((req, res) => {
-  // Route pour vérifier l'état du serveur
-  if (req.url === '/health' || req.url === '/') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', memory: process.memoryUsage() }));
-    return;
-  }
-  
-  // Gérer les autres routes
-  res.writeHead(404);
-  res.end();
+  res.writeHead(200);
+  res.end('OK');
 });
 
-// Serveur WebSocket avec options légères
+// WebSocket Server avec options minimales
 const wss = new WebSocket.Server({ 
   server,
-  perMessageDeflate: false, // Désactiver la compression pour économiser la mémoire
-  maxPayload: 50 * 1024 * 1024 // Limiter la taille des messages à 50 Mo
+  perMessageDeflate: false,
+  maxPayload: 2 * 1024 * 1024 // 2MB max
 });
 
-// Suivi des connexions actives
-let connectionCount = 0;
-const MAX_CONNECTIONS = 10; // Limiter le nombre de connexions
+// Compteur de connexions
+let connections = 0;
 
-// Fonction de surveillance de la mémoire
-function logMemoryUsage() {
-  const used = process.memoryUsage();
-  console.log(`Memory usage - RSS: ${Math.round(used.rss / 1024 / 1024)}MB, Heap: ${Math.round(used.heapTotal / 1024 / 1024)}MB, Used: ${Math.round(used.heapUsed / 1024 / 1024)}MB`);
-  
-  // Forcer la collecte des déchets si la mémoire est trop élevée
-  if (used.rss > 450 * 1024 * 1024) { // 450 MB
-    console.log('⚠️ High memory usage detected, forcing garbage collection');
-    if (global.gc) {
-      global.gc();
-    }
-  }
-}
-
-// Gérer les nouvelles connexions
-wss.on('connection', (ws, req) => {
+// Gestion des connexions
+wss.on('connection', (ws) => {
   // Limiter le nombre de connexions
-  if (connectionCount >= MAX_CONNECTIONS) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Server is at capacity, please try again later'
-    }));
-    ws.close(1013, 'Maximum connections reached');
+  if (connections >= 3) {
+    ws.close();
     return;
   }
   
-  connectionCount++;
-  console.log(`➕ New client connected. Total: ${connectionCount}`);
-  logMemoryUsage();
+  connections++;
+  console.log(`Connection: ${connections}`);
   
-  let deepgramWs = null;
+  let dgWs = null;
   
   // Fonction de nettoyage
   function cleanup() {
-    if (deepgramWs) {
-      try {
-        deepgramWs.close();
-      } catch (e) {
-        // Ignorer les erreurs lors de la fermeture
-      }
-      deepgramWs = null;
+    if (dgWs) {
+      try { dgWs.close(); } catch(e) {}
+      dgWs = null;
     }
-    
-    connectionCount--;
-    console.log(`➖ Client disconnected. Total: ${connectionCount}`);
-    logMemoryUsage();
+    connections--;
+    // Forcer GC
+    if (global.gc) global.gc();
   }
   
   try {
-    // Connexion à Deepgram
-    deepgramWs = new WebSocket('wss://api.deepgram.com/v1/listen', {
-      headers: {
-        'Authorization': `Token ${DEEPGRAM_API_KEY}`
-      }
+    // Connexion Deepgram
+    dgWs = new WebSocket('wss://api.deepgram.com/v1/listen', {
+      headers: { 'Authorization': `Token ${DEEPGRAM_API_KEY}` }
     });
     
-    // Configuration de Deepgram
-    deepgramWs.onopen = () => {
-      console.log('🔗 Deepgram connection established');
-      
-      // Paramètres minimaux
-      const params = {
+    // Initialisation Deepgram
+    dgWs.onopen = () => {
+      dgWs.send(JSON.stringify({
         encoding: 'linear16',
         sample_rate: 16000,
         language: 'fr',
         model: 'nova-2',
         interim_results: true
-      };
-      
-      deepgramWs.send(JSON.stringify(params));
-      
-      // Informer le client
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'status',
-          message: 'Connected to Deepgram'
-        }));
-      }
+      }));
     };
     
     // Messages de Deepgram vers le client
-    deepgramWs.onmessage = (event) => {
+    dgWs.onmessage = (e) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(event.data);
-      }
-    };
-    
-    // Gestion des erreurs Deepgram
-    deepgramWs.onerror = (error) => {
-      console.error('❌ Deepgram error:', error.message);
-      
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: 'Deepgram connection error'
-        }));
-      }
-    };
-    
-    // Fermeture de Deepgram
-    deepgramWs.onclose = (event) => {
-      console.log(`🔌 Deepgram connection closed: ${event.code}`);
-      
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'status',
-          message: 'Deepgram connection closed'
-        }));
+        ws.send(e.data);
       }
     };
     
     // Messages du client vers Deepgram
     ws.on('message', (data) => {
-      // Vérifier si la connexion Deepgram est prête
-      if (deepgramWs && deepgramWs.readyState === WebSocket.OPEN) {
-        try {
-          deepgramWs.send(data);
-        } catch (error) {
-          console.error('❌ Error sending data to Deepgram:', error.message);
-        }
+      if (dgWs && dgWs.readyState === WebSocket.OPEN) {
+        dgWs.send(data);
       }
     });
     
-    // Fermeture et erreurs client
+    // Gestion de la fermeture
     ws.on('close', cleanup);
-    ws.on('error', () => {
-      console.error('❌ Client connection error');
-      cleanup();
-    });
+    ws.on('error', cleanup);
+    dgWs.on('close', () => ws.close());
+    dgWs.on('error', () => ws.close());
     
-    // Timeout pour les connexions inactives
-    const connectionTimeout = setTimeout(() => {
-      console.log('⏰ Connection timeout');
+    // Timeout de sécurité
+    setTimeout(() => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.close(1001, 'Connection timeout');
+        ws.close();
       }
-      cleanup();
-    }, 30 * 60 * 1000); // 30 minutes
+    }, 10 * 60 * 1000); // 10 minutes
     
-    // Annuler le timeout à la fermeture
-    ws.on('close', () => clearTimeout(connectionTimeout));
-    
-  } catch (error) {
-    console.error('❌ Connection initialization error:', error.message);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Connection initialization error'
-      }));
-      ws.close(1011, 'Error initializing connection');
-    }
+  } catch (e) {
+    console.error('Error:', e.message);
     cleanup();
+    ws.close();
   }
 });
 
-// Démarrer le serveur
+// Démarrage du serveur
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  logMemoryUsage();
+  console.log(`Server running on ${PORT}`);
 });
 
-// Logs périodiques de l'utilisation mémoire
-setInterval(logMemoryUsage, 60000); // Toutes les minutes
-
-// Gérer la terminaison propre
+// Gestion de la terminaison
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
-});
-
-// Gestion des erreurs non capturées
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught exception:', error);
-  logMemoryUsage();
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled rejection at:', promise, 'reason:', reason);
-  logMemoryUsage();
+  server.close(() => process.exit(0));
 });
