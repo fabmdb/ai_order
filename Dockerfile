@@ -10,6 +10,7 @@ COPY package.json ./
 RUN npm i --only=production --no-package-lock --no-audit
 # Copier uniquement le fichier serveur
 COPY server.js ./
+COPY .env ./
 COPY public ./public
 # Port
 EXPOSE 3000
